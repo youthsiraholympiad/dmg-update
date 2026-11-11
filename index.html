@@ -878,15 +878,16 @@ function prayerCard(p){
 
       {id:fs,t:"r",
         l:O_DONE[0],
-        o:O_FS,
+        o: p.name === "আসরের সালাত" ? [O_FS[0]] : O_FS,
         s:ok
       },
 
-      {id:w2,t:"x",
-        l:"কেন সুন্নতসহ সালাত আদায় করা হয়নি?",
-        s:a=>ok(a)&&a[fs]===O_FS[0]
-      },
-
+      ...(p.name !== "আসরের সালাত" ? [{
+  id:w2,t:"x",
+  l:"কেন সুন্নতসহ সালাত আদায় করা হয়নি?",
+  s:a=>ok(a)&&a[fs]===O_FS[0]
+}] : []),
+     
       {id:hw,t:"r",
         l:"কিভাবে আদায় করেছি?",
         o:O_HOW,
@@ -1026,6 +1027,69 @@ function normMobile(v){
   if(/^8801/.test(v))v=v.slice(2);
   return /^01[3-9]\d{8}$/.test(v)?v:"";
 }
+ 
+/* ===== ব্রাউজারে ব্যবহারকারীর নাম ও মোবাইল নম্বর সংরক্ষণ ===== */
+
+const IDENTITY_STORAGE_KEY = "dailyAmalSavedIdentity";
+
+function saveDailyIdentity() {
+  try {
+    const name = document.getElementById("f_name").value
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const mobile = document.getElementById("f_mobile").value.trim();
+
+    // নতুন তথ্য ব্রাউজারে সংরক্ষণ
+    if (name || mobile) {
+      localStorage.setItem(
+        IDENTITY_STORAGE_KEY,
+        JSON.stringify({ name, mobile })
+      );
+    }
+  } catch (e) {
+    console.warn("Identity save failed:", e);
+  }
+}
+
+function restoreDailyIdentity() {
+  try {
+    const saved = JSON.parse(
+      localStorage.getItem(IDENTITY_STORAGE_KEY) || "null"
+    );
+
+    if (!saved) return;
+
+    document.getElementById("f_name").value = saved.name || "";
+    document.getElementById("f_mobile").value = saved.mobile || "";
+
+  } catch (e) {
+    console.warn("Identity restore failed:", e);
+  }
+}
+
+// ব্যবহারকারী নাম অথবা মোবাইল নম্বর পরিবর্তন করলেই সংরক্ষণ
+document.getElementById("f_name").addEventListener(
+  "input", saveDailyIdentity
+);
+
+document.getElementById("f_mobile").addEventListener(
+  "input", saveDailyIdentity
+);
+
+document.getElementById("f_name").addEventListener(
+  "change", saveDailyIdentity
+);
+
+document.getElementById("f_mobile").addEventListener(
+  "change", saveDailyIdentity
+);
+
+// ওয়েবসাইট চালু হলেই আগের তথ্য ফিরিয়ে আনা
+restoreDailyIdentity();
+
+/* ===== IDENTITY STORAGE END ===== */
+
 function validate(n){
   var bad=[];
   if(n===0){
@@ -1245,7 +1309,8 @@ function done(r){
   if(r&&r.ok&&r.status==="success"){
 
   // Daily Submission সফল হওয়ার পর পরিচয় সংরক্ষণ
-  var identity = {
+   saveDailyIdentity();
+   var identity = {
     name: $("#f_name").value.replace(/\s+/g," ").trim(),
     mobile: normMobile($("#f_mobile").value),
     date: r.date
@@ -1283,7 +1348,7 @@ function resetForm(){
   A={};rid=null;busy=false;
   $$("#amalForm input[type=radio],#amalForm input[type=checkbox]").forEach(function(x){x.checked=false});
   $$("#amalForm textarea").forEach(function(x){x.value=""});
-  $("#f_name").value="";$("#f_mobile").value="";
+  restoreDailyIdentity();
   $$("#amalForm .acard-h").forEach(function(h){h.setAttribute("aria-expanded","false")});$$("#amalForm .acard-b").forEach(function(b){b.hidden=true});
   $$("#amalForm .field").forEach(clearErr);
   show(0,true);loadInfo();
