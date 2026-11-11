@@ -1271,27 +1271,6 @@ function applyInfo(){
 
 }
 
-// Daily পরিচয় পরিবর্তন হলে Weekly বন্ধ
-document.addEventListener("dailyIdentityCleared", function() {
-
-  SES.forEach(function(s) {
-
-    ST[s].verified = false;
-    ST[s].mobile = "";
-    ST[s].checking = false;
-
-    showQs(s, false);
-
-    var msg = $(".wk-access-message", P(s));
-
-    if (msg) {
-      msg.textContent =
-        "প্রথমে আজকের দৈনিক আমলশিট সফলভাবে জমা দিন।";
-    }
-
-  });
-
-});
 function submit(){
   if(busy)return;busy=true;sync();rid=rid||("r"+Date.now().toString(36)+Math.random().toString(36).slice(2,10));
   $("#loader").classList.add("open");
@@ -1548,6 +1527,28 @@ function showQs(s,on){
 
   sync(s);
 }
+// Daily পরিচয় পরিবর্তন হলে Weekly বন্ধ
+document.addEventListener("dailyIdentityCleared", function() {
+
+  SES.forEach(function(s) {
+
+    ST[s].verified = false;
+    ST[s].mobile = "";
+    ST[s].checking = false;
+
+    showQs(s, false);
+
+    var msg = $(".wk-access-message", P(s));
+
+    if (msg) {
+      msg.textContent =
+        "প্রথমে আজকের দৈনিক আমলশিট সফলভাবে জমা দিন।";
+    }
+
+  });
+
+});
+
 function normMobile(v){
   v=String(v||"").replace(/[০-৯]/g,function(d){return BN.indexOf(d)}).replace(/[^\d+]/g,"").replace(/^\+/,"");
   if(/^8801/.test(v))v=v.slice(2);
