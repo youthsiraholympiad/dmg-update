@@ -1480,6 +1480,50 @@ form.addEventListener("change",function(e){
   }
 
 });
+form.addEventListener("click",function(e){
+  var h=e.target.closest(".acard-h");
+  if(h&&!h.disabled){var o=h.getAttribute("aria-expanded")==="true";h.setAttribute("aria-expanded",String(!o));$("#"+h.getAttribute("aria-controls")).hidden=o;return}
+  var nc=e.target.closest(".nextCard");
+  if(nc){var d=nc.closest(".acard"),nx=d.nextElementSibling;$(".acard-h",d).setAttribute("aria-expanded","false");$(".acard-b",d).hidden=true;
+    if(nx&&!$(".acard-h",nx).disabled){$(".acard-h",nx).setAttribute("aria-expanded","true");$(".acard-b",nx).hidden=false;nx.scrollIntoView({block:"start"})}}
+});
+form.addEventListener("submit",function(e){e.preventDefault()});
+$("#prevBtn").addEventListener("click",function(){if(step>0)show(step-1)});
+$("#nextBtn").addEventListener("click",function(){
+  if(busy)return;
+  var bad=validate(step);
+  if(bad.length){alertMsg("অনুগ্রহ করে লাল চিহ্নিত প্রশ্নগুলোর উত্তর দিন।");focusBad(bad[0]);return}
+  if(step===0){verifyMobile();return}
+  if(step<2)show(step+1);else submit();
+});
+function verifyMobile(){
+  busy=true;sync();$("#nextBtn").textContent="যাচাই হচ্ছে…";
+  api("POST","",{action:"verify",mobile:$("#f_mobile").value},20000).then(function(r){
+    busy=false;
+    if(r&&r.ok&&r.authorized){show(1);return}
+    sync();
+
+var f = $("#fld-mobile");
+
+var message =
+  (r && (r.code === "NOT_AUTHORIZED" || r.authorized === false))
+  ? "দুঃখিত! আপনি আমাদের অনুমোদিত ব্যবহারকারী নন। আমলশিট পূরণের জন্য অনুগ্রহ করে আমাদের দায়িত্বশীলদের সঙ্গে যোগাযোগ করুন।"
+  : "আপনার দেওয়া তথ্য যাচাই করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।";
+
+setErr(f, message);
+
+alertMsg(
+  "আপনি আমাদের অনুমোদিত ব্যবহারকারী না হলে আমলশিট পূরণ করতে পারবেন না।"
+);
+
+focusBad(f);
+  },function(err){
+    busy=false;sync();
+    alertMsg(err&&err.code==="NO_URL"?"সার্ভারের ঠিকানা (Web App URL) এখনও সেট করা হয়নি।":"সার্ভারের সাথে যোগাযোগ করা যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।");
+  });
+}
+
+
 /* ---- মেনু ও মোডাল ---- */
 var mb=$("#menuBtn"),mn=$("#mobileNav");
 function menu(o){mb.setAttribute("aria-expanded",String(o));mn.hidden=!o;mb.setAttribute("aria-label",o?"মেনু বন্ধ করুন":"মেনু খুলুন")}
