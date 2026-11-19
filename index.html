@@ -1000,7 +1000,18 @@ const W_CARDS={
  FRIDAY:[
   {title:"সূরা কাহাফ",qs:[
    {k:"kahf",t:"r",l:"সূরা কাহাফ পড়েছি",o:W_KAHF},
-   {k:"kahfPages",t:"x",lab:true,max:100,l:"সূরা কাহাফ কত পৃষ্ঠা পড়েছেন?",s:a=>a.kahf===W_KAHF[1]}]},
+   
+{
+  k:"kahfPages",
+  t:"x",
+  lab:true,
+  max:100,
+  numericOnly:true,
+  minValue:1,
+  suffix:"পৃষ্ঠা",
+  l:"সূরা কাহাফ কত পৃষ্ঠা পড়েছেন?",
+  s:a=>a.kahf===W_KAHF[1]
+}]},
   {title:"জুমার খুতবা",qs:[
    {k:"khutba",t:"r",l:"জুমার সম্পূর্ণ খুতবা শুনেছি",o:[W_Y+"সম্পূর্ণ শুনেছি",W_MISS]}]},
   {title:"শুক্রবারের দুরুদ",qs:[
@@ -1670,7 +1681,41 @@ function qHtml(s,q){
     q.o.map(function(o){return '<label class="choice"><input type="radio" name="'+nm+'" value="'+esc(o)+'"><span class="choice-body"><span class="dot"></span><span><strong>'+esc(o)+'</strong></span></span></label>'}).join("")+
     (q.u?'<input class="input u-input" type="text" inputmode="numeric" autocomplete="off" maxlength="7" data-u="'+q.u.k+'" placeholder="নিজে লিখুন" aria-label="নিজে লিখুন">':'')+
     '</div><p class="field-error"></p></fieldset>';
-  if(q.lab) return '<div class="field" data-k="'+q.k+'" hidden><label class="label" for="'+nm+'">'+esc(q.l)+'<span class="req">*</span></label><textarea class="input" id="'+nm+'" rows="2" maxlength="'+(q.max||1500)+'" placeholder="লিখুন"></textarea><p class="field-error"></p></div>';
+  
+if(q.numericOnly){
+
+  return '<div class="field" data-k="'+q.k+'" hidden>'+
+
+    '<label class="label" for="'+nm+'">'+
+      esc(q.l)+
+      '<span class="req">*</span>'+
+    '</label>'+
+
+    '<div class="number-entry">'+
+
+      '<input class="input" '+
+      'id="'+nm+'" '+
+      'type="text" '+
+      'inputmode="numeric" '+
+      'autocomplete="off" '+
+      'data-numeric-only="true" '+
+      'data-suffix="'+esc(q.suffix)+'" '+
+      'placeholder="শুধু সংখ্যা লিখুন">'+
+
+      '<span class="number-suffix">'+
+        esc(q.suffix)+
+      '</span>'+
+
+    '</div>'+
+
+    '<p class="field-error"></p>'+
+
+  '</div>';
+
+}
+
+if(q.lab) return '<div class="field" data-k="'+q.k+'" hidden><label class="label" for="'+nm+'">'+esc(q.l)+'<span class="req">*</span></label><textarea class="input" id="'+nm+'" rows="2" maxlength="'+(q.max||1500)+'" placeholder="লিখুন"></textarea><p class="field-error"></p></div>';
+
   return '<div class="field" data-k="'+q.k+'" hidden><textarea class="input" id="'+nm+'" rows="3" maxlength="1500" placeholder="'+esc(q.l)+'" aria-label="'+esc(q.l)+'"></textarea><p class="field-error"></p></div>';
 }
 function panelHtml(s,i){
@@ -1729,10 +1774,38 @@ function build(){
 /* ---- যুক্তি ---- */
 function numOk(v){var s=String(v).replace(/[০-৯]/g,function(d){return BN.indexOf(d)});return /^[1-9]\d{0,6}$/.test(s)&&+s<=W_DUROOD_MAX}
 function vis(s,q){return !q.s||q.s(ST[s].A)}
+
 function qOk(s,q){
-  if(!vis(s,q))return true;var A=ST[s].A;
-  if(q.t==="r")return !!A[q.k]||!!(q.u&&A[q.u.k]&&numOk(A[q.u.k]));
+
+  if(!vis(s,q))return true;
+
+  var A=ST[s].A;
+
+  if(q.t==="r"){
+    return !!A[q.k]||
+      !!(q.u&&A[q.u.k]&&numOk(A[q.u.k]));
+  }
+
+  if(q.numericOnly){
+
+    var m=/^([0-9০-৯]+)\s+পৃষ্ঠা$/.exec(
+      String(A[q.k] || "")
+    );
+
+    if(!m)return false;
+
+    var n=Number(
+      String(m[1]).replace(/[০-৯]/g,function(d){
+        return BN.indexOf(d);
+      })
+    );
+
+    return Number.isSafeInteger(n) && n>=q.minValue;
+
+  }
+
   return !!A[q.k];
+
 }
 function cardOk(s,i){return W_CARDS[s][i].qs.every(function(q){return qOk(s,q)})}
 function unlocked(s,i){return !UI_CONFIG.lockCards||i===0||cardOk(s,i-1)}
@@ -1860,22 +1933,95 @@ function applyInfo(){
 }
 
 /* ---- ইভেন্ট ---- */
+
 $("#wkPanels").addEventListener("input",function(e){
-  var pan=e.target.closest(".step-panel");if(!pan)return;
-  var s=pan.dataset.wk,A=ST[s].A,el=e.target.closest("[data-k]");
+
+  var pan=e.target.closest(".step-panel");
+
+  if(!pan)return;
+
+  var s=pan.dataset.wk;
+  var A=ST[s].A;
+  var el=e.target.closest("[data-k]");
+
   if(el){
+
     var k=el.dataset.k;
-    if(e.target.dataset&&e.target.dataset.u){
-      var uk=e.target.dataset.u,uv=e.target.value.replace(/\s+/g," ").trim();
-      if(uv){A[uk]=uv;delete A[k];$$("input[type=radio]",el).forEach(function(x){x.checked=false})}else delete A[uk];
+
+    if(e.target.dataset &&
+       e.target.dataset.numericOnly==="true"){
+
+      var raw=e.target.value.replace(/[^0-9০-৯]/g,"");
+
+      e.target.value=raw;
+
+      var suffix=e.target.dataset.suffix;
+
+      if(raw){
+        A[k]=raw+" "+suffix;
+      }else{
+        delete A[k];
+      }
+
+    }else if(e.target.dataset && e.target.dataset.u){
+
+      var uk=e.target.dataset.u;
+      var uv=e.target.value.replace(/\s+/g," ").trim();
+
+      if(uv){
+
+        A[uk]=uv;
+        delete A[k];
+
+        $$("input[type=radio]",el).forEach(function(x){
+          x.checked=false;
+        });
+
+      }else{
+
+        delete A[uk];
+
+      }
+
     }else{
-      var v=e.target.type==="radio"?(e.target.checked?e.target.value:""):e.target.value.replace(/\s+/g," ").trim();
-      if(v)A[k]=v;else delete A[k];
-      if(v&&e.target.type==="radio"){var cu=$("input[data-u]",el);if(cu){cu.value="";delete A[cu.dataset.u]}}
+
+      var v=e.target.type==="radio"
+        ? (e.target.checked ? e.target.value : "")
+        : e.target.value.replace(/\s+/g," ").trim();
+
+      if(v){
+        A[k]=v;
+      }else{
+        delete A[k];
+      }
+
+      if(v && e.target.type==="radio"){
+
+        var cu=$("input[data-u]",el);
+
+        if(cu){
+          cu.value="";
+          delete A[cu.dataset.u];
+        }
+
+      }
+
     }
+
     clearErr(el);
-  }else{var f=e.target.closest(".field");if(f)clearErr(f)}
+
+  }else{
+
+    var f=e.target.closest(".field");
+
+    if(f)clearErr(f);
+
+  }
+
   sync(s);
+
+});
+(s);
 });
 $("#wkPanels").addEventListener("click",function(e){
   var pan=e.target.closest(".step-panel");if(!pan)return;var s=pan.dataset.wk;
@@ -2041,16 +2187,46 @@ function verify(s) {
 
   });
 }
+
 function validateAll(s){
+
   var bad=[],p=P(s),A=ST[s].A;
-  W_CARDS[s].forEach(function(c){c.qs.forEach(function(q){
-    if(qOk(s,q))return;
-    var el=$('[data-k="'+q.k+'"]',p),msg;
-    if(q.u&&A[q.u.k]&&!numOk(A[q.u.k]))msg="সঠিক সংখ্যা লিখুন (১ থেকে "+bn("100000")+" এর মধ্যে পূর্ণসংখ্যা)।";
-    else msg=q.t==="r"?"এই প্রশ্নের উত্তর নির্বাচন করুন।":"অনুগ্রহ করে এই প্রশ্নের উত্তর লিখুন।";
-    setErr(el,msg);bad.push(el);
-  })});
+
+  W_CARDS[s].forEach(function(c){
+
+    c.qs.forEach(function(q){
+
+      if(qOk(s,q))return;
+
+      var el=$('[data-k="'+q.k+'"]',p);
+      var msg;
+
+      if(q.u&&A[q.u.k]&&!numOk(A[q.u.k])){
+
+        msg="সঠিক সংখ্যা লিখুন (১ থেকে "+
+          bn("100000")+" এর মধ্যে পূর্ণসংখ্যা)।";
+
+      }else if(q.numericOnly && A[q.k]){
+
+        msg="কমপক্ষে ১ পৃষ্ঠা লিখুন এবং শুধু সংখ্যা ব্যবহার করুন।";
+
+      }else{
+
+        msg=q.t==="r"
+          ? "এই প্রশ্নের উত্তর নির্বাচন করুন।"
+          : "অনুগ্রহ করে এই প্রশ্নের উত্তর লিখুন।";
+
+      }
+
+      setErr(el,msg);
+      bad.push(el);
+
+    });
+
+  });
+
   return bad;
+
 }
  // Daily Submission সফল হলে Weekly পুনরায় যাচাই
 document.addEventListener("dailyAmalSubmitted", function() {
