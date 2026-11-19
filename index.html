@@ -478,7 +478,43 @@ select.input{
 .support-desc{margin:0;font-size:1.05rem;line-height:1.9;color:var(--ink)}
 .support-cta .btn-primary{box-shadow:0 8px 20px -8px rgba(2,136,209,.75)}
 .btn .call-ic{width:1.25em;height:1.25em;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.u-input{min-height:52px;resize:none;overflow:hidden}
+
+.number-entry{
+  display:flex;
+  align-items:stretch;
+  gap:8px;
+  width:100%;
+  margin-top:8px;
+}
+
+.number-entry .u-input,
+.number-entry .input{
+  flex:1;
+  min-width:0;
+  min-height:52px;
+  resize:none;
+}
+
+.number-unit{
+  flex:0 0 112px;
+  min-width:112px;
+  min-height:52px;
+}
+
+.number-suffix{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:76px;
+  padding:8px 14px;
+  border:1.5px solid var(--line-strong);
+  background:var(--bg-soft);
+  border-radius:12px;
+  font-weight:600;
+  color:var(--ink);
+  white-space:nowrap;
+}
+ .u-input{min-height:52px;resize:none;overflow:hidden}
 .site-footer{background:var(--emerald-900);color:#B3E5FC;padding:36px 0 28px}
 .site-footer h3{color:#fff;font-size:1.2rem}
 .site-footer p{color:#B3E5FC}
@@ -845,13 +881,40 @@ const OTHERS=[
   {id:214719995,t:"r",l:"সালাতে তাড়াহুড়ো না করে কি ধীরস্থিরতা বজায় রেখেছি",o:["আলহামদুলিল্লাহ, আমি সন্তুষ্ট","আফোয়ান, তবে আমি আরো ধীরস্থিরতা বজায় রাখার চেষ্টা করবো ইনশাআল্লাহ"]}]},
   {title:"দেখে দেখে কুরআন তিলওয়াত",qs:[
   {id:639956102,t:"r",l:"দেখে দেখে কুরআন তিলওয়াত",o:["আলহামদুলিল্লাহ, করেছি।","আফোয়ান, আমল ছুটে গেছে"]},
-  {id:1072799169,u:1095859865,t:"r",l:"আলহামদুলিল্লাহ, করেছি",o:O_MIN,s:a=>a[639956102]==="আলহামদুলিল্লাহ, করেছি।"}]},
+  {
+  id:1072799169,
+  u:1095859865,
+  uMode:"duration",
+  minMinutes:30,
+  t:"r",
+  l:"আলহামদুলিল্লাহ, করেছি",
+  o:O_MIN,
+  s:a=>a[639956102]==="আলহামদুলিল্লাহ, করেছি।"
+}]},
  {title:"দ্বীনি জ্ঞান অর্জনের জন্য সময়",qs:[
   {id:556257107,t:"r",l:"দ্বীনি জ্ঞান অর্জনের জন্য সময়",o:["আলহামদুলিল্লাহ, দিয়েছি","আফোয়ান, আমল ছুটে গেছে"]},
-  {id:1849090268,u:1922738255,t:"r",l:"আলহামদুলিল্লাহ, দিয়েছি",o:O_MIN,s:a=>a[556257107]==="আলহামদুলিল্লাহ, দিয়েছি"}]},
+  {
+  id:1849090268,
+  u:1922738255,
+  uMode:"duration",
+  minMinutes:30,
+  t:"r",
+  l:"আলহামদুলিল্লাহ, দিয়েছি",
+  o:O_MIN,
+  s:a=>a[556257107]==="আলহামদুলিল্লাহ, দিয়েছি"
+}]},
  {title:"ইস্তেগফার পড়েছি",qs:[
   {id:780705687,t:"r",l:"ইস্তেগফার পড়েছি",o:["আলহামদুলিল্লাহ, পড়েছি","আফোয়ান, আমল ছুটে গেছে"]},
-  {id:802384520,u:818018182,t:"r",l:"আলহামদুলিল্লাহ, পড়েছি",o:O_CNT,s:a=>a[780705687]==="আলহামদুলিল্লাহ, পড়েছি"}]},
+  {
+  id:802384520,
+  u:818018182,
+  uMode:"count",
+  min:100,
+  t:"r",
+  l:"আলহামদুলিল্লাহ, পড়েছি",
+  o:O_CNT,
+  s:a=>a[780705687]==="আলহামদুলিল্লাহ, পড়েছি"
+}]},
  {title:"দুরুদ পড়া",qs:[
   {id:562601658,t:"r",l:"প্রতিদিন কমপক্ষে ১০০ বার দুরুদ পড়েছি",o:["আলহামদুলিল্লাহ, পড়েছি","আফোয়ান, আমল ছুটে গেছে"]}]},
  {title:"দাওয়াত দেওয়া",qs:[
@@ -978,10 +1041,52 @@ function bnDate(ymd){var p=ymd.split("-");return (p[2]+" "+MON[+p[1]-1]+" "+p[0]
 ["brandOrg","heroOrg","formOrg","footOrg"].forEach(function(i){$("#"+i).textContent=SITE_CONFIG.organizationName});
 
 /* ---- রেন্ডার ---- */
+ function customEntryHtml(q){
+
+  if(!q.u) return "";
+
+  if(q.uMode === "duration"){
+
+    return '<div class="number-entry">'+
+
+      '<input class="input u-input" '+
+      'type="text" inputmode="decimal" '+
+      'autocomplete="off" maxlength="12" '+
+      'data-u="'+q.u+'" '+
+      'data-u-mode="duration" '+
+      'placeholder="শুধু সংখ্যা লিখুন">'+
+
+      '<select class="input number-unit" '+
+      'data-u-unit-for="'+q.u+'">'+
+        '<option value="মিনিট">মিনিট</option>'+
+        '<option value="ঘন্টা">ঘন্টা</option>'+
+      '</select>'+
+
+    '</div>';
+  }
+
+  if(q.uMode === "count"){
+
+    return '<div class="number-entry">'+
+
+      '<input class="input u-input" '+
+      'type="text" inputmode="numeric" '+
+      'autocomplete="off" maxlength="12" '+
+      'data-u="'+q.u+'" '+
+      'data-u-mode="count" '+
+      'placeholder="শুধু সংখ্যা লিখুন">'+
+
+      '<span class="number-suffix">বার</span>'+
+
+    '</div>';
+  }
+
+  return '<textarea class="input u-input" rows="1" maxlength="200" data-u="'+q.u+'" placeholder="নিজে লিখুন"></textarea>';
+}
 function qHtml(q){
   var id=q.id;
   if(q.t==="r") return '<fieldset class="field" data-id="'+id+'" hidden><legend class="label">'+esc(q.l)+'<span class="req">*</span></legend><div class="choice-grid">'+
-    q.o.map(function(o){return '<label class="choice"><input type="radio" name="e'+id+'" value="'+esc(o)+'"><span class="choice-body"><span class="dot"></span><span><strong>'+esc(o)+'</strong></span></span></label>'}).join("")+(q.u?'<textarea class="input u-input" rows="1" maxlength="200" data-u="'+q.u+'" placeholder="নিজে লিখুন" aria-label="নিজে লিখুন"></textarea>':'')+
+    q.o.map(function(o){return '<label class="choice"><input type="radio" name="e'+id+'" value="'+esc(o)+'"><span class="choice-body"><span class="dot"></span><span><strong>'+esc(o)+'</strong></span></span></label>'}).join("")+customEntryHtml(q)+
     '</div><p class="field-error"></p></fieldset>';
   if(q.t==="c") return '<fieldset class="field" data-id="'+id+'" hidden><legend class="label">'+esc(q.l)+'<span class="req">*</span></legend><p class="field-hint" style="margin:0 0 8px;color:var(--muted);font-size:.9rem">এক বা একাধিক ওয়াক্ত বেছে নিন।</p><div class="choice-grid">'+
     q.o.map(function(o){return '<label class="choice"><input type="checkbox" name="e'+id+'" value="'+esc(o)+'"><span class="choice-body"><span class="dot sq"></span><span><strong>'+esc(o)+'</strong></span></span></label>'}).join("")+
@@ -997,11 +1102,63 @@ CARDS.forEach(function(c,i){
 $("#stepper").innerHTML=STEPS.map(function(s,i){return '<li><span class="step-dot">'+BN[i+1]+'</span>'+esc(s)+'</li>'}).join("");
 
 /* ---- যুক্তি ---- */
+ function asciiDigits(v){
+  return String(v || "").replace(/[০-৯]/g,function(d){
+    return BN.indexOf(d);
+  });
+}
+
+function cleanNumberText(v,decimal){
+
+  var pattern = decimal
+    ? /[^0-9০-৯.]/g
+    : /[^0-9০-৯]/g;
+
+  var x = String(v || "").replace(pattern,"");
+
+  if(!decimal) return x;
+
+  var dot = x.indexOf(".");
+
+  if(dot !== -1){
+    x = x.slice(0,dot+1) +
+        x.slice(dot+1).replace(/\./g,"");
+  }
+
+  return x;
+}
+
+function customAnswerValid(q,value){
+
+  if(!value) return false;
+
+  if(q.uMode === "duration"){
+
+    var m = /^([0-9০-৯]+(?:\.[0-9০-৯]+)?)\s*(মিনিট|ঘন্টা)$/.exec(String(value));
+
+    if(!m) return false;
+
+    var n = Number(asciiDigits(m[1]));
+
+    var minutes = n * (m[2] === "ঘন্টা" ? 60 : 1);
+
+    return isFinite(n) && minutes >= q.minMinutes;
+  }
+
+  if(q.uMode === "count"){
+
+    var c = /^([0-9০-৯]+)\s*বার$/.exec(String(value));
+
+    return !!c && Number(asciiDigits(c[1])) >= q.min;
+  }
+
+  return !!value;
+}
 function vis(q){return !q.s||q.s(A)}
 function qOk(q){
   if(!vis(q))return true;
   if(q.t==="o")return true;
-  return !!A[q.id]||!!(q.u&&A[q.u]);                       // r ও x বাধ্যতামূলক; x-এ শুধু space গ্রহণযোগ্য নয় (A-তে trim করা মান)
+  return !!A[q.id] ||   !!(q.u && customAnswerValid(q,A[q.u]));                       // r ও x বাধ্যতামূলক; x-এ শুধু space গ্রহণযোগ্য নয় (A-তে trim করা মান)
 }
 function cardOk(i){return CARDS[i].qs.every(qOk)}
 function unlocked(i){return !UI_CONFIG.lockCards||i===0||i===PRAYER_COUNT||cardOk(i-1)}
@@ -1128,78 +1285,167 @@ function show(n,init){
   sync();alertMsg("");if(!init)$("#formCard").scrollIntoView({block:"start"});
 }
 
+
 /* ---- ইভেন্ট ---- */
 var form=$("#amalForm");
-form.addEventListener("input",function(e){
- if (e.target.id === "f_name" || e.target.id === "f_mobile") {
-  try {
-    sessionStorage.removeItem("dailyAmalIdentity");
-  } catch(err) {}
 
-  document.dispatchEvent(
-    new Event("dailyIdentityCleared")
-  );
-}
-  var el=e.target.closest("[data-id]");
-  if(el){
-    if(e.target.dataset&&e.target.dataset.u){
-      var uv=e.target.value.replace(/\s+/g," ").trim();
-      if(uv){A[e.target.dataset.u]=uv;delete A[el.dataset.id];$$('input[type=radio]',el).forEach(function(x){x.checked=false})}else delete A[e.target.dataset.u];
-    }else if(e.target.type==="checkbox"){
-      var cs=$$('input[type=checkbox]:checked',el).map(function(x){return x.value});
-      if(cs.length)A[el.dataset.id]=cs;else delete A[el.dataset.id];
+function updateDailyCustomInput(target,el){
+
+  var uid=target.dataset.u ||
+          target.dataset.uUnitFor;
+
+  var input=$('input[data-u="'+uid+'"]',el);
+
+  var unit=$('select[data-u-unit-for="'+uid+'"]',el);
+
+  if(input && input.dataset.uMode){
+
+    var mode=input.dataset.uMode;
+
+    input.value=cleanNumberText(
+      input.value,
+      mode==="duration"
+    );
+
+    var raw=input.value.trim();
+
+    var suffix=mode==="count"
+      ? "বার"
+      : (unit ? unit.value : "মিনিট");
+
+    var answer=raw ? raw+" "+suffix : "";
+
+    if(answer){
+
+      A[uid]=answer;
+
+      delete A[el.dataset.id];
+
+      $$('input[type="radio"]',el).forEach(function(x){
+        x.checked=false;
+      });
+
     }else{
-      var v=e.target.type==="radio"?(e.target.checked?e.target.value:""):e.target.value.replace(/\s+/g," ").trim();
-      if(v)A[el.dataset.id]=v;else delete A[el.dataset.id];
-      if(v&&e.target.type==="radio"){var cu=$("textarea[data-u]",el);if(cu){cu.value="";delete A[cu.dataset.u]}}
+
+      delete A[uid];
+
     }
-    clearErr(el);
-  }else{var f=e.target.closest(".field");if(f)clearErr(f)}
-  sync();
-});
-form.addEventListener("click",function(e){
-  var h=e.target.closest(".acard-h");
-  if(h&&!h.disabled){var o=h.getAttribute("aria-expanded")==="true";h.setAttribute("aria-expanded",String(!o));$("#"+h.getAttribute("aria-controls")).hidden=o;return}
-  var nc=e.target.closest(".nextCard");
-  if(nc){var d=nc.closest(".acard"),nx=d.nextElementSibling;$(".acard-h",d).setAttribute("aria-expanded","false");$(".acard-b",d).hidden=true;
-    if(nx&&!$(".acard-h",nx).disabled){$(".acard-h",nx).setAttribute("aria-expanded","true");$(".acard-b",nx).hidden=false;nx.scrollIntoView({block:"start"})}}
-});
-form.addEventListener("submit",function(e){e.preventDefault()});
-$("#prevBtn").addEventListener("click",function(){if(step>0)show(step-1)});
-$("#nextBtn").addEventListener("click",function(){
-  if(busy)return;
-  var bad=validate(step);
-  if(bad.length){alertMsg("অনুগ্রহ করে লাল চিহ্নিত প্রশ্নগুলোর উত্তর দিন।");focusBad(bad[0]);return}
-  if(step===0){verifyMobile();return}
-  if(step<2)show(step+1);else submit();
-});
-function verifyMobile(){
-  busy=true;sync();$("#nextBtn").textContent="যাচাই হচ্ছে…";
-  api("POST","",{action:"verify",mobile:$("#f_mobile").value},20000).then(function(r){
-    busy=false;
-    if(r&&r.ok&&r.authorized){show(1);return}
-    sync();
 
-var f = $("#fld-mobile");
+  }else{
 
-var message =
-  (r && (r.code === "NOT_AUTHORIZED" || r.authorized === false))
-  ? "দুঃখিত! আপনি আমাদের অনুমোদিত ব্যবহারকারী নন। আমলশিট পূরণের জন্য অনুগ্রহ করে আমাদের দায়িত্বশীলদের সঙ্গে যোগাযোগ করুন।"
-  : "আপনার দেওয়া তথ্য যাচাই করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।";
+    var uv=target.value.replace(/\s+/g," ").trim();
 
-setErr(f, message);
+    if(uv){
+      A[uid]=uv;
+      delete A[el.dataset.id];
+    }else{
+      delete A[uid];
+    }
 
-alertMsg(
-  "আপনি আমাদের অনুমোদিত ব্যবহারকারী না হলে আমলশিট পূরণ করতে পারবেন না।"
-);
+  }
 
-focusBad(f);
-  },function(err){
-    busy=false;sync();
-    alertMsg(err&&err.code==="NO_URL"?"সার্ভারের ঠিকানা (Web App URL) এখনও সেট করা হয়নি।":"সার্ভারের সাথে যোগাযোগ করা যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।");
-  });
 }
 
+form.addEventListener("input",function(e){
+
+  if(e.target.id==="f_name" ||
+     e.target.id==="f_mobile"){
+
+    try{
+      sessionStorage.removeItem("dailyAmalIdentity");
+    }catch(err){}
+
+    document.dispatchEvent(
+      new Event("dailyIdentityCleared")
+    );
+
+  }
+
+  var el=e.target.closest("[data-id]");
+
+  if(el){
+
+    if(e.target.dataset &&
+       (e.target.dataset.u ||
+        e.target.dataset.uUnitFor)){
+
+      updateDailyCustomInput(e.target,el);
+
+    }else if(e.target.type==="checkbox"){
+
+      var cs=$$('input[type="checkbox"]:checked',el)
+        .map(function(x){return x.value});
+
+      if(cs.length){
+        A[el.dataset.id]=cs;
+      }else{
+        delete A[el.dataset.id];
+      }
+
+    }else{
+
+      var v=e.target.type==="radio"
+        ? (e.target.checked ? e.target.value : "")
+        : e.target.value.replace(/\s+/g," ").trim();
+
+      if(v){
+        A[el.dataset.id]=v;
+      }else{
+        delete A[el.dataset.id];
+      }
+
+      if(v && e.target.type==="radio"){
+
+        var cu=$('input[data-u],textarea[data-u]',el);
+
+        if(cu){
+          cu.value="";
+          delete A[cu.dataset.u];
+        }
+
+        var unit=$("select[data-u-unit-for]",el);
+
+        if(unit){
+          unit.selectedIndex=0;
+        }
+
+      }
+
+    }
+
+    clearErr(el);
+
+  }else{
+
+    var f=e.target.closest(".field");
+
+    if(f)clearErr(f);
+
+  }
+
+  sync();
+
+});
+
+form.addEventListener("change",function(e){
+
+  if(e.target.matches("select[data-u-unit-for]")){
+
+    var uid=e.target.dataset.uUnitFor;
+
+    var input=$('input[data-u="'+uid+'"]');
+
+    if(input){
+
+      input.dispatchEvent(
+        new Event("input",{bubbles:true})
+      );
+
+    }
+
+  }
+
+});
 /* ---- মেনু ও মোডাল ---- */
 var mb=$("#menuBtn"),mn=$("#mobileNav");
 function menu(o){mb.setAttribute("aria-expanded",String(o));mn.hidden=!o;mb.setAttribute("aria-label",o?"মেনু বন্ধ করুন":"মেনু খুলুন")}
@@ -1271,6 +1517,27 @@ function applyInfo(){
 
 }
 
+// Daily পরিচয় পরিবর্তন হলে Weekly বন্ধ
+document.addEventListener("dailyIdentityCleared", function() {
+
+  SES.forEach(function(s) {
+
+    ST[s].verified = false;
+    ST[s].mobile = "";
+    ST[s].checking = false;
+
+    showQs(s, false);
+
+    var msg = $(".wk-access-message", P(s));
+
+    if (msg) {
+      msg.textContent =
+        "প্রথমে আজকের দৈনিক আমলশিট সফলভাবে জমা দিন।";
+    }
+
+  });
+
+});
 function submit(){
   if(busy)return;busy=true;sync();rid=rid||("r"+Date.now().toString(36)+Math.random().toString(36).slice(2,10));
   $("#loader").classList.add("open");
@@ -1527,28 +1794,6 @@ function showQs(s,on){
 
   sync(s);
 }
-// Daily পরিচয় পরিবর্তন হলে Weekly বন্ধ
-document.addEventListener("dailyIdentityCleared", function() {
-
-  SES.forEach(function(s) {
-
-    ST[s].verified = false;
-    ST[s].mobile = "";
-    ST[s].checking = false;
-
-    showQs(s, false);
-
-    var msg = $(".wk-access-message", P(s));
-
-    if (msg) {
-      msg.textContent =
-        "প্রথমে আজকের দৈনিক আমলশিট সফলভাবে জমা দিন।";
-    }
-
-  });
-
-});
-
 function normMobile(v){
   v=String(v||"").replace(/[০-৯]/g,function(d){return BN.indexOf(d)}).replace(/[^\d+]/g,"").replace(/^\+/,"");
   if(/^8801/.test(v))v=v.slice(2);
