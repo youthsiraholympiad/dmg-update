@@ -1176,7 +1176,18 @@ function unlocked(i){return !UI_CONFIG.lockCards||i===0||i===PRAYER_COUNT||cardO
 function sync(){
   CARDS.forEach(function(c){c.qs.forEach(function(q){
     var el=$('[data-id="'+q.id+'"]'),v=vis(q);
-    if(!v&&(A[q.id]!==undefined||(q.u&&A[q.u]!==undefined))){delete A[q.id];if(q.u)delete A[q.u];$$("input",el).forEach(function(x){x.checked=false});var t=$("textarea",el);if(t)t.value=""}
+    if(!v&&(A[q.id]!==undefined||(q.u&&A[q.u]!==undefined))){
+      delete A[q.id];
+      if(q.u)delete A[q.u];
+      $$("input",el).forEach(function(x){
+        if(x.type === "radio" || x.type === "checkbox") x.checked = false;
+        else x.value = "";
+      });
+      var t=$("textarea",el);
+      if(t)t.value="";
+      var unit=$("select[data-u-unit-for]",el);
+      if(unit)unit.selectedIndex=0;
+    }
     if(!v)clearErr(el);
     el.hidden=!v;
   })});
@@ -1280,7 +1291,19 @@ function validate(n){
   for(var i=from;i<to;i++)CARDS[i].qs.forEach(function(q){
     if(qOk(q))return;
     var el=$('[data-id="'+q.id+'"]');
-    setErr(el,(q.t==="r"||q.t==="c")?"এই প্রশ্নের উত্তর নির্বাচন করুন।":"অনুগ্রহ করে এই প্রশ্নের উত্তর লিখুন।");bad.push(el);
+    var msg;
+    if(q.u && A[q.u] && !customAnswerValid(q,A[q.u])){
+      msg = q.uMode === "duration"
+        ? "সর্বনিম্ন ৩০ মিনিট লিখুন (অথবা ০.৫ ঘণ্টা)।"
+        : "সর্বনিম্ন ১০০ বার লিখুন।";
+    }else if(q.u){
+      msg = "একটি অপশন নির্বাচন করুন অথবা নিজের সংখ্যা লিখুন।";
+    }else{
+      msg = (q.t==="r"||q.t==="c")
+        ? "এই প্রশ্নের উত্তর নির্বাচন করুন।"
+        : "অনুগ্রহ করে এই প্রশ্নের উত্তর লিখুন।";
+    }
+    setErr(el,msg);bad.push(el);
   });
   return bad;
 }
@@ -1528,27 +1551,6 @@ function applyInfo(){
 
 }
 
-// Daily পরিচয় পরিবর্তন হলে Weekly বন্ধ
-document.addEventListener("dailyIdentityCleared", function() {
-
-  SES.forEach(function(s) {
-
-    ST[s].verified = false;
-    ST[s].mobile = "";
-    ST[s].checking = false;
-
-    showQs(s, false);
-
-    var msg = $(".wk-access-message", P(s));
-
-    if (msg) {
-      msg.textContent =
-        "প্রথমে আজকের দৈনিক আমলশিট সফলভাবে জমা দিন।";
-    }
-
-  });
-
-});
 function submit(){
   if(busy)return;busy=true;sync();rid=rid||("r"+Date.now().toString(36)+Math.random().toString(36).slice(2,10));
   $("#loader").classList.add("open");
@@ -1614,6 +1616,8 @@ function resetForm(){
   A={};rid=null;busy=false;
   $$("#amalForm input[type=radio],#amalForm input[type=checkbox]").forEach(function(x){x.checked=false});
   $$("#amalForm textarea").forEach(function(x){x.value=""});
+  $$("#amalForm input[data-u]").forEach(function(x){x.value=""});
+  $$("#amalForm select[data-u-unit-for]").forEach(function(x){x.selectedIndex=0});
   restoreDailyIdentity();
   $$("#amalForm .acard-h").forEach(function(h){h.setAttribute("aria-expanded","false")});$$("#amalForm .acard-b").forEach(function(b){b.hidden=true});
   $$("#amalForm .field").forEach(clearErr);
@@ -1867,6 +1871,37 @@ function showQs(s,on){
 
   sync(s);
 }
+
+// Daily নাম/মোবাইল বদলালে আগের ব্যক্তির Weekly যাচাই ও উত্তর মুছে দেবে
+// এটি Weekly Script-এর ভেতরে থাকবে, কারণ SES, ST, P এবং showQs এখানে সংজ্ঞায়িত।
+document.addEventListener("dailyIdentityCleared", function(){
+
+  SES.forEach(function(s){
+
+    ST[s] = freshState();
+
+    var p = P(s);
+
+    $$("input[type=radio],input[type=checkbox],input[data-u],input[data-numeric-only]",p).forEach(function(x){
+      if(x.type === "radio" || x.type === "checkbox") x.checked = false;
+      else x.value = "";
+    });
+
+    $$("textarea",p).forEach(function(x){ x.value = ""; });
+    $$("select[data-u-unit-for]",p).forEach(function(x){ x.selectedIndex = 0; });
+    $$(".acard-h",p).forEach(function(h){ h.setAttribute("aria-expanded","false"); });
+    $$(".acard-b",p).forEach(function(b){ b.hidden = true; });
+    $$(".field",p).forEach(clearErr);
+
+    showQs(s,false);
+
+    var msg = $(".wk-access-message",p);
+    if(msg) msg.textContent = "প্রথমে আজকের দৈনিক আমলশিট সফলভাবে জমা দিন।";
+
+  });
+
+});
+
 function normMobile(v){
   v=String(v||"").replace(/[০-৯]/g,function(d){return BN.indexOf(d)}).replace(/[^\d+]/g,"").replace(/^\+/,"");
   if(/^8801/.test(v))v=v.slice(2);
@@ -2020,8 +2055,6 @@ $("#wkPanels").addEventListener("input",function(e){
 
   sync(s);
 
-});
-(s);
 });
 $("#wkPanels").addEventListener("click",function(e){
   var pan=e.target.closest(".step-panel");if(!pan)return;var s=pan.dataset.wk;
@@ -2367,7 +2400,7 @@ $("#wkRetry").addEventListener("click",function(){closeM();if(curS)submit(curS)}
 function resetSession(s){
   ST[s]=freshState();var p=P(s);
   $$("input[type=radio]",p).forEach(function(x){x.checked=false});
-  $$("textarea,.u-input",p).forEach(function(x){x.value=""});
+  $$("textarea,.u-input,input[data-numeric-only]",p).forEach(function(x){x.value=""});
   $$(".acard-h",p).forEach(function(h){h.setAttribute("aria-expanded","false")});$$(".acard-b",p).forEach(function(b){b.hidden=true});
   $$(".field",p).forEach(clearErr);
   showQs(s,false);
