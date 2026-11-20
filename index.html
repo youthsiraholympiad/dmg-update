@@ -1715,7 +1715,7 @@ function bnDate(ymd){var p=ymd.split("-");return bn(p[2]+" "+MON[+p[1]-1]+" "+p[
 var SES=["FRIDAY","MONDAY"];
 var META={FRIDAY:{step:"শুক্রবারের আমল",day:"শুক্রবার"},MONDAY:{step:"সোমবারের আমল",day:"সোমবার"}};
 var ST={}, info=null, active=0, chosen=false, lastFocus=null, wbusy=false, curS=null;
-function freshState(){return {A:{},rid:null,verified:false,done:false}}
+function freshState(){return {A:{},rid:null,verified:false,checking:false,mobile:"",done:false}}
 SES.forEach(function(s){ST[s]=freshState()});
 $("#wkOrg").textContent=SITE_CONFIG.organizationName;
 
@@ -2188,17 +2188,18 @@ function verify(s) {
   if (!identity) {
     ST[s].verified = false;
     ST[s].mobile = "";
-
+    ST[s].checking = false;
+    ST[s].done = false;
     showQs(s, false);
 
     if (msg) {
       msg.textContent =
         "প্রথমে আজকের দৈনিক আমলশিট সফলভাবে জমা দিন।";
     }
-
     return;
   }
 
+  // একই নম্বরের যাচাই চললে বা ইতোমধ্যে অনুমতি থাকলে পুনরায় অনুরোধ নয়
   if (ST[s].checking ||
       (ST[s].verified && ST[s].mobile === identity.mobile)) {
     return;
@@ -2206,6 +2207,7 @@ function verify(s) {
 
   ST[s].checking = true;
   ST[s].verified = false;
+  ST[s].mobile = identity.mobile;
 
   if (msg) {
     msg.textContent = "দৈনিক আমলশিটের জমা যাচাই হচ্ছে...";
@@ -2214,67 +2216,94 @@ function verify(s) {
   showQs(s, false);
 
   api("POST", "", {
-  action: "verify",
-  session: s,
-  mobile: identity.mobile
-}, 20000).then(function(r) {
+    action: "verify",
+    session: s,
+    mobile: identity.mobile
+  }, 20000).then(function(r) {
+
+    // যাচাই চলার সময় মোবাইল নম্বর পরিবর্তিত হলে পুরোনো ফল গ্রহণ নয়
+    var currentIdentity = getDailyIdentity();
+    if (!currentIdentity || currentIdentity.mobile !== identity.mobile) {
+      return;
+    }
 
     ST[s].checking = false;
 
+    if (r && r.ok && r.authorized && r.dailySubmitted) {
 
-if (r && r.ok && r.authorized && r.dailySubmitted) {
+      ST[s].verified = true;
+      ST[s].mobile = identity.mobile;
 
-  ST[s].verified = true;
-  ST[s].mobile = identity.mobile;
+      // Weekly আগে সফলভাবে জমা হয়ে থাকলে আর ফর্ম খুলবে না
+      if (r.weeklySubmitted) {
+        ST[s].done = true;
+        showQs(s, false);
+        if (msg) {
+          msg.textContent =
+            "আলহামদুলিল্লাহ! এই দিনের সাপ্তাহিক আমল ইতোমধ্যে জমা হয়েছে।";
+        }
+        renderStepper();
+        return;
+      }
 
-  // Weekly আগে জমা হয়ে থাকলে
-  if (r.weeklySubmitted) {
+      // আগের জমার PENDING অবস্থা থাকলে নিরাপত্তার জন্য দ্বিতীয় জমা বন্ধ
+      if (r.weeklyPending) {
+        ST[s].done = true;
+        showQs(s, false);
+        if (msg) {
+          msg.textContent =
+            "আপনার আগের সাপ্তাহিক জমার ফলাফল এখনো নিশ্চিত হয়নি। পুনরায় জমা না দিয়ে দায়িত্বশীলের সঙ্গে যোগাযোগ করুন।";
+        }
+        renderStepper();
+        return;
+      }
 
-    ST[s].done = true;
+      // আজকের Daily জমা আছে, কিন্তু এই Weekly Session এখনো জমা হয়নি
+      ST[s].done = false;
+      showQs(s, true);
 
+      var firstCard = $(".acard", p);
+      if (firstCard) {
+        var firstButton = $(".acard-h", firstCard);
+        firstButton.setAttribute("aria-expanded", "true");
+        $(".acard-b", firstCard).hidden = false;
+      }
+      renderStepper();
+      return;
+    }
+
+    ST[s].verified = false;
+    ST[s].mobile = "";
+    ST[s].done = false;
     showQs(s, false);
 
     if (msg) {
       msg.textContent =
-        "আলহামদুলিল্লাহ! এই দিনের সাপ্তাহিক আমল ইতোমধ্যে জমা হয়েছে।";
+        (r && r.message) ||
+        "প্রথমে আজকের দৈনিক আমলশিট সফলভাবে জমা দিন।";
+    }
+    renderStepper();
+
+  }, function(err) {
+
+    var currentIdentity = getDailyIdentity();
+    if (!currentIdentity || currentIdentity.mobile !== identity.mobile) {
+      return;
     }
 
-    return;
-  }
-
-  // আগের জমার ফলাফল এখনো নিশ্চিত না হলে
-  if (r.weeklyPending) {
-
-    ST[s].done = true;
-
+    ST[s].checking = false;
+    ST[s].verified = false;
+    ST[s].mobile = "";
     showQs(s, false);
 
     if (msg) {
-      msg.textContent =
-        "আপনার আগের সাপ্তাহিক জমার ফলাফল যাচাই হচ্ছে। পুনরায় জমা দেবেন না।";
+      msg.textContent = err && err.code === "NO_URL"
+        ? "সাপ্তাহিক Apps Script-এর Web App URL সেট করা নেই।"
+        : "সার্ভারের সঙ্গে যোগাযোগ করা যায়নি। ইন্টারনেট পরীক্ষা করে আবার চেষ্টা করুন।";
     }
+    renderStepper();
 
-    return;
-  }
-
-  // Daily জমা আছে, Weekly এখনো জমা হয়নি
-  ST[s].done = false;
-
-  showQs(s, true);
-
-  var firstCard = $(".acard", p);
-
-  if (firstCard) {
-
-    var firstButton = $(".acard-h", firstCard);
-
-    firstButton.setAttribute("aria-expanded", "true");
-
-    $(".acard-b", firstCard).hidden = false;
-
-  }
-
-  return;
+  });
 }
 
 function validateAll(s){
