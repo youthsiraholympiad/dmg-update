@@ -1382,8 +1382,7 @@ function updateDailyCustomInput(target,el){
 
 form.addEventListener("input",function(e){
 
-  if(e.target.id==="f_name" ||
-     e.target.id==="f_mobile"){
+  if(e.target.id==="f_mobile"){
 
     try{
       sessionStorage.removeItem("dailyAmalIdentity");
@@ -1916,31 +1915,21 @@ function showQs(s,on){
   sync(s);
 }
 
-// Daily নাম/মোবাইল বদলালে আগের ব্যক্তির Weekly যাচাই ও উত্তর মুছে দেবে
-// এটি Weekly Script-এর ভেতরে থাকবে, কারণ SES, ST, P এবং showQs এখানে সংজ্ঞায়িত।
-document.addEventListener("dailyIdentityCleared", function(){
+ // মোবাইল নম্বর পরিবর্তন হলে আগের Weekly পরিচয় ও উত্তর বাতিল
+document.addEventListener("dailyIdentityCleared", function() {
 
-  SES.forEach(function(s){
+  SES.forEach(function(s) {
 
     ST[s] = freshState();
 
-    var p = P(s);
+    showQs(s, false);
 
-    $$("input[type=radio],input[type=checkbox],input[data-u],input[data-numeric-only]",p).forEach(function(x){
-      if(x.type === "radio" || x.type === "checkbox") x.checked = false;
-      else x.value = "";
-    });
+    var msg = $(".wk-access-message", P(s));
 
-    $$("textarea",p).forEach(function(x){ x.value = ""; });
-    $$("select[data-u-unit-for]",p).forEach(function(x){ x.selectedIndex = 0; });
-    $$(".acard-h",p).forEach(function(h){ h.setAttribute("aria-expanded","false"); });
-    $$(".acard-b",p).forEach(function(b){ b.hidden = true; });
-    $$(".field",p).forEach(clearErr);
-
-    showQs(s,false);
-
-    var msg = $(".wk-access-message",p);
-    if(msg) msg.textContent = "প্রথমে আজকের দৈনিক আমলশিট সফলভাবে জমা দিন।";
+    if (msg) {
+      msg.textContent =
+        "প্রথমে আজকের দৈনিক আমলশিট সফলভাবে জমা দিন।";
+    }
 
   });
 
@@ -2155,15 +2144,26 @@ $("#wkStepper").addEventListener("click",function(e){
   }
 });
 
+
 function getDailyIdentity() {
 
   var saved = null;
 
+  // প্রথমে চলমান Session থেকে তথ্য নেবে
   try {
     saved = JSON.parse(
       sessionStorage.getItem("dailyAmalIdentity") || "null"
     );
   } catch(e) {}
+
+  // Session-এ না পেলে Browser-এর স্থায়ী Storage দেখবে
+  if (!saved) {
+    try {
+      saved = JSON.parse(
+        localStorage.getItem("dailyAmalSavedIdentity") || "null"
+      );
+    } catch(e) {}
+  }
 
   if (!saved) return null;
 
@@ -2176,8 +2176,8 @@ function getDailyIdentity() {
     mobile: mobile,
     date: saved.date || ""
   };
-}
 
+}
 
 function verify(s) {
 
@@ -2214,55 +2214,67 @@ function verify(s) {
   showQs(s, false);
 
   api("POST", "", {
-    action: "verify",
-    mobile: identity.mobile
-  }, 20000).then(function(r) {
+  action: "verify",
+  session: s,
+  mobile: identity.mobile
+}, 20000).then(function(r) {
 
     ST[s].checking = false;
 
-    if (r && r.ok && r.authorized && r.dailySubmitted) {
 
-      ST[s].verified = true;
-      ST[s].mobile = identity.mobile;
+if (r && r.ok && r.authorized && r.dailySubmitted) {
 
-      showQs(s, true);
+  ST[s].verified = true;
+  ST[s].mobile = identity.mobile;
 
-      var firstCard = $(".acard", p);
+  // Weekly আগে জমা হয়ে থাকলে
+  if (r.weeklySubmitted) {
 
-      if (firstCard) {
-        var firstButton = $(".acard-h", firstCard);
-
-        firstButton.setAttribute("aria-expanded", "true");
-
-        $(".acard-b", firstCard).hidden = false;
-      }
-
-      return;
-    }
-
-    ST[s].verified = false;
+    ST[s].done = true;
 
     showQs(s, false);
 
     if (msg) {
       msg.textContent =
-        (r && r.message) ||
-        "প্রথমে আজকের দৈনিক আমলশিট সফলভাবে জমা দিন।";
+        "আলহামদুলিল্লাহ! এই দিনের সাপ্তাহিক আমল ইতোমধ্যে জমা হয়েছে।";
     }
 
-  }, function() {
+    return;
+  }
 
-    ST[s].checking = false;
-    ST[s].verified = false;
+  // আগের জমার ফলাফল এখনো নিশ্চিত না হলে
+  if (r.weeklyPending) {
+
+    ST[s].done = true;
 
     showQs(s, false);
 
     if (msg) {
       msg.textContent =
-        "সার্ভারের সাথে যোগাযোগ করা যায়নি। আবার চেষ্টা করুন।";
+        "আপনার আগের সাপ্তাহিক জমার ফলাফল যাচাই হচ্ছে। পুনরায় জমা দেবেন না।";
     }
 
-  });
+    return;
+  }
+
+  // Daily জমা আছে, Weekly এখনো জমা হয়নি
+  ST[s].done = false;
+
+  showQs(s, true);
+
+  var firstCard = $(".acard", p);
+
+  if (firstCard) {
+
+    var firstButton = $(".acard-h", firstCard);
+
+    firstButton.setAttribute("aria-expanded", "true");
+
+    $(".acard-b", firstCard).hidden = false;
+
+  }
+
+  return;
 }
 
 function validateAll(s){
